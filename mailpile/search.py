@@ -93,7 +93,7 @@ class PostingList(object):
   @classmethod
   def Append(cls, session, word, mail_ids, compact=True, sig=None):
     config = session.config
-    sig = sig or cls.WordSig(word)
+    sig = sig or cls.WordSig(word, config)
     fd, fn = cls.GetFile(session, sig, mode='a')
     if (compact
     and (os.path.getsize(os.path.join(config.postinglist_dir(fn), fn)) >
@@ -111,8 +111,8 @@ class PostingList(object):
       fd.write('%s\t%s\n' % (sig, '\t'.join(mail_ids)))
 
   @classmethod
-  def WordSig(cls, word):
-    return strhash(word, cls.HASH_LEN)
+  def WordSig(cls, word, config):
+    return strhash(word, cls.HASH_LEN, obfuscate=config.get('obfuscate_index'))
 
   @classmethod
   def SaveFile(cls, session, prefix):
@@ -141,7 +141,7 @@ class PostingList(object):
   def __init__(self, session, word, sig=None, config=None):
     self.config = config or session.config
     self.session = session
-    self.sig = sig or self.WordSig(word)
+    self.sig = sig or self.WordSig(word, self.config)
     self.word = word
     self.WORDS = {self.sig: set()}
     self.load()
@@ -154,17 +154,10 @@ class PostingList(object):
 
   def load(self):
     self.size = 0
-    fd, sig = self.GetFile(self.session, self.sig)
-    self.filename = sig
+    fd, self.filename = self.GetFile(self.session, self.sig)
     if fd:
       try:
-        for line in fd:
-          self.size += len(line)
-          if line.startswith(GPG_BEGIN_MESSAGE):
-            for line in decrypt_gpg([line], fd):
-              self.parse_line(line)
-          else:
-            self.parse_line(line)
+        self.size = decrypt_and_parse_lines(fd, self.parse_line)
       except ValueError:
         pass
       finally:
@@ -270,7 +263,7 @@ class GlobalPostingList(PostingList):
   def Append(cls, session, word, mail_ids, compact=True):
     super(GlobalPostingList, cls).Append(session, word, mail_ids, compact=compact)
     global GLOBAL_POSTING_LIST
-    sig = cls.WordSig(word)
+    sig = cls.WordSig(word, session.config)
     if GLOBAL_POSTING_LIST is None:
       GLOBAL_POSTING_LIST = {}
     if sig not in GLOBAL_POSTING_LIST:

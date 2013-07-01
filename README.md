@@ -245,20 +245,27 @@ to all your communications can be a privacy risk in and of itself:
 consider the search `naked att:jpg` as an example.  It is almost certainly
 worth taking steps to protect your Mailpile.
 
-One effective strategy, is to store your `.mailpile` folder on an encrypted
-volume.
+The simplest and most effective strategy, is to store your `.mailpile`
+folder on an encrypted volume.
 
 Alternately, if you have a GPG key and run Mailpile in an environment
-where gpg-agent is available for key management, you can tell Mailpile to
-encrypt its config and data using your key, like so:
+where gpg-agent is available for key management, you can tell Mailpile
+to encrypt its config and data using your key, like so:
 
-    $ ./mp -S gpg_recipient=youremail@yourdomain.com
+    $ ./mp --set "gpg_recipient = youremail@yourdomain.com"
 
-**Note:** Currently this only encrypts the main index and config file, and
-only works if `gpg` is in your path. The search terms themselves are not
-encrypted, which means the contents of individual messages could at least
-in part be derived from the index.  Store the index on an encrypted volume
-if you consider this a problem.
+Note that this only encrypts the main index and config file, and only
+works if `gpg` is in your path. The search terms themselves are not
+encrypted, which means the contents of individual messages could at
+least in part be derived from the index.  This problem can be mitigated,
+at the cost of some performance, by telling Mailpile to use a one-way
+hash to obfuscate the search terms:
+
+    $ ./mp --set "obfuscate_index = Some RaNdoM LongISH silly SECRET"
+
+Note that if you change this setting, whatever has already been indexed
+will "disappear" and become unfindable.  So do this first if you do it
+at all!
 
 
 ## Hacking and exploring ##
@@ -331,6 +338,7 @@ patches for:
    * Spam detection
    * Improve conversation IDs assignment/threading
    * New "attributes" for the indexer to facilitate smart searches
+   * Better query parser (terms AND terms) or (terms AND NOT terms), etc.
    * Support for other mailbox formats, maybe even POP3/IMAP indexing
    * A nice Python/XML-RPC API for automation (in progress)
    * A pretty UI on top of the XML-RPC API, or the HTTP/JSON UI. (in progress)
@@ -380,6 +388,7 @@ Contributors:
    * Smari McCarthy (<http://www.smarimccarthy.com/>)
    * Björgvin Ragnarsson (<https://github.com/nifgraup/>)
    * Brennan Novak (<https://brennannovak.com/>)
+   * Halldór Rúnarsson (<https://github.com/halldor>)
 
 This program is free software: you can redistribute it and/or modify it
 under the terms of the  GNU  Affero General Public License as published

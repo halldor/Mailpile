@@ -51,11 +51,14 @@ def sha1b64(s):
     h.update(s)
   return h.digest().encode('base64')
 
-def strhash(s, length):
-  s2 = re.sub('[^0123456789abcdefghijklmnopqrstuvwxyz]+', '',
-              s.lower())[:(length-4)]
-  while len(s2) < length:
-    s2 += b64c(sha1b64(s)).lower()
+def strhash(s, length, obfuscate=None):
+  if obfuscate:
+    s2 = b64c(sha1b64('%s%s' % (s, obfuscate))).lower()
+  else:
+    s2 = re.sub('[^0123456789abcdefghijklmnopqrstuvwxyz]+', '',
+                s.lower())[:(length-4)]
+    while len(s2) < length:
+      s2 += b64c(sha1b64(s)).lower()
   return s2[:length]
 
 def b36(number):
@@ -83,6 +86,17 @@ def decrypt_gpg(lines, fd):
     raise AccessError("GPG was unable to decrypt the data.")
 
   return  lines
+
+def decrypt_and_parse_lines(fd, parser):
+  size = 0
+  for line in fd:
+    size += len(line)
+    if line.startswith(GPG_BEGIN_MESSAGE):
+       for line in decrypt_gpg([line], fd):
+         parser(line.decode('utf-8'))
+    else:
+      parser(line.decode('utf-8'))
+  return size
 
 def gpg_open(filename, recipient, mode):
   fd = open(filename, mode)
