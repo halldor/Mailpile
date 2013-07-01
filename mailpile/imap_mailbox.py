@@ -31,19 +31,31 @@ class IMAPMailbox(Mailbox):
 
     def add(self, message):
         """Add message and return assigned key."""
-        # TODO(halldor): not tested...
-        self._mailbox.append(self.mailbox, message=message)
+        # TODO(halldor): Needs tests, also what should be returned/raised in case of errors
+        logger.debug("Adding message to %s" % self.mailbox)
+        typ, data = self._mailbox.append(self.mailbox, message=message)
+        response = data[0]
+        if typ == "OK": 
+            # example response: "[APPENDUID 7 4081] (Success)"
+            command, key, size, success = response.split()
+            return key
+            
 
     def remove(self, key):
         """Remove the keyed message; raise KeyError if it doesn't exist."""
-        # TODO(halldor): not tested...
-        self._mailbox.store(key, "+FLAGS", r"\Deleted")
+        typ, data = self._mailbox.store(key, "+FLAGS", r"\Deleted")
+        if typ == "OK":
+            self._mailbox.expunge()
+        else:
+            # TODO(halldor): what error should this raise (if any)
+            raise Exception("IMAP error %s: %s" % (typ, data))
 
-    def __setitem__(self, key, message):
-        """Replace the keyed message; raise KeyError if it doesn't exist."""
-        raise NotImplementedError('Method must be implemented by subclass')
+    def get_message(self, key):
+        """Return a Message representation or raise a KeyError."""
+        return Message(self.get_bytes(key))
 
-    def _get(self, key):
+    def get_bytes(self, key):
+        """Return a byte string representation or raise a KeyError."""
         logger.debug("Fetching %s" % key)
         typ, data = self._mailbox.fetch(key, '(RFC822)')
         response = data[0]
@@ -51,17 +63,9 @@ class IMAPMailbox(Mailbox):
             raise KeyError
         return response[1]
 
-    def get_message(self, key):
-        """Return a Message representation or raise a KeyError."""
-        return Message(self._get(key))
-
-    def get_bytes(self, key):
-        """Return a byte string representation or raise a KeyError."""
-        raise NotImplementedError('Method must be implemented by subclass')
-
     def get_file(self, key):
         """Return a file-like representation or raise a KeyError."""
-        message = self._get(key)
+        message = self.get_bytes(key)
         fd = StringIO.StringIO()
         fd.write(message)
         fd.seek(0)
@@ -77,7 +81,7 @@ class IMAPMailbox(Mailbox):
         typ, data = self._mailbox.fetch(key, '(RFC822)')
         response = data[0]
         if response is None:
-            return False
+                return False
         return True
 
     def __len__(self):
@@ -86,15 +90,18 @@ class IMAPMailbox(Mailbox):
 
     def flush(self):
         """Write any pending changes to the disk."""
-        raise NotImplementedError('Method must be implemented by subclass')
+        # noop - should be handled by the IMAP protocol
+        pass
 
     def lock(self):
         """Lock the mailbox."""
-        raise NotImplementedError('Method must be implemented by subclass')
+        # noop - should be handled by the IMAP protocol
+        pass
 
     def unlock(self):
         """Unlock the mailbox if it is locked."""
-        raise NotImplementedError('Method must be implemented by subclass')
+        # noop - should be handled by the IMAP protocol
+        pass
 
     def close(self):
         """Flush and close the mailbox."""
