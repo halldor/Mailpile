@@ -33,7 +33,7 @@ from email.mime.text import MIMEText
 
 from smtplib import SMTP, SMTP_SSL
 
-from mailpile import imap_mailbox
+from mailpile import imap
 from mailpile.util import *
 from lxml.html.clean import Cleaner
 
@@ -236,7 +236,7 @@ def OpenMailbox(fn):
   else:
     return IncrementalMbox(fn)
 
-class IncrementalIMAPMailbox(imap_mailbox.IMAPMailbox):
+class IncrementalIMAPMailbox(imap.IMAPMailbox):
   editable = True
   save_to = None
   parsed = {}
